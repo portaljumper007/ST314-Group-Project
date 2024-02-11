@@ -35,7 +35,16 @@ print(immigration_data.c, n = 27)
 hist(immigration_data$zimmatt)
 hist(immigration_data.c$mean.zimmatt)
 
-# table 
-count <- (table(immigration_data$econact))
-percent <- round(prop.table(table(immigration_data$econact)) * 100, digits = 1)
-rbind(count, percent)
+# labour market country breakdown ('econact')
+countries_labour_market <- immigration_data %>%
+  group_by(country) %>%
+  summarise(Employed_percent = round(sum(econact == "Employed", na.rm = TRUE) / n() * 100, 1),
+    Education_percent = round(sum(econact == "Education", na.rm = TRUE) / n() * 100, 1),
+    Unemployed_percent = round(sum(econact == "Unemployed", na.rm = TRUE) / n() * 100, 1),
+    OutLabourMarket_percent = round(sum(econact == "OutLabourMarket", na.rm = TRUE) / n() * 100, 1), .groups = 'drop')
+countries_labour_market
+
+
+
+
+
