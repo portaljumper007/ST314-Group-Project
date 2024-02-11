@@ -1,5 +1,8 @@
 library(dplyr)
 library(expss)
+library(lme4)
+library(sjstats)
+
 immigration_data <- read.csv(file="immigration.csv")
 head(immigration_data)
 
@@ -43,6 +46,8 @@ countries_labour_market <- immigration_data %>%
     Unemployed_percent = round(sum(econact == "Unemployed", na.rm = TRUE) / n() * 100, 1),
     OutLabourMarket_percent = round(sum(econact == "OutLabourMarket", na.rm = TRUE) / n() * 100, 1), .groups = 'drop')
 countries_labour_market
+
+# attitude towards immigration (zimmatt) ICC
 
 
 
