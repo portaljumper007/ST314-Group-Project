@@ -24,8 +24,14 @@ class(immigration_data$partner)
 immigration_data$partner <- as.factor(immigration_data$partner)
 class(immigration_data$partner)
 
+# simple data analysis of variables
 nrow(immigration_data) # there are 33706 observations
 length(unique(immigration_data$country)) # there are 27 countries
+min(table(immigration_data$country)) # sample size of each country
+sd(immigration_data$zimmatt) # zimmatt standard deviation
+mean(immigration_data$eduyrs, na.rm=TRUE) # education mean
+(table(immigration_data$female)["0"])/(table(immigration_data$female)["0"] + table(immigration_data$female)["1"]) * 100 # percentage of males
+
 
 # new dataset for all countries
 immigration_data.c <- immigration_data %>%
@@ -38,6 +44,7 @@ print(immigration_data.c, n = 27)
 hist(immigration_data$zimmatt)
 hist(immigration_data.c$mean.zimmatt)
 
+
 # labour market country breakdown ('econact')
 countries_labour_market <- immigration_data %>%
   group_by(country) %>%
@@ -47,7 +54,9 @@ countries_labour_market <- immigration_data %>%
     OutLabourMarket_percent = round(sum(econact == "OutLabourMarket", na.rm = TRUE) / n() * 100, 1), .groups = 'drop')
 countries_labour_market
 
-# attitude towards immigration (zimmatt) ICC
+
+
+
 
 
 
