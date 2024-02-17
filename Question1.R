@@ -30,7 +30,7 @@ class(immigration_data$partner)
 # simple data analysis of variables
 nrow(immigration_data) # there are 33706 observations
 length(unique(immigration_data$country)) # there are 27 countries
-min(table(immigration_data$country)) # sample size of each country
+(table(immigration_data$country)) # sample size of each country
 sd(immigration_data$zimmatt) # zimmatt standard deviation
 mean(immigration_data$eduyrs, na.rm=TRUE) # education mean
 (table(immigration_data$female)["0"])/(table(immigration_data$female)["0"] + table(immigration_data$female)["1"]) * 100 # percentage of males
@@ -54,28 +54,22 @@ print(immigration_data.c, n = 27)
 
 ## Graphs
 
-# histograms for zimmatt
-hist(immigration_data$zimmatt)
-hist(immigration_data.c$mean.zimmatt)
-
 # countries' attitudes towards immigration
-ggplot(immigration_data.c, aes(x=reorder(country, mean.zimmatt), y=mean.zimmatt)) + geom_bar(stat="identity") +
+ggplot(immigration_data.c, aes(x=reorder(country, mean.zimmatt), y=mean.zimmatt, fill=mean.zimmatt>0)) + geom_bar(stat="identity") +
+  scale_fill_manual(values=c(`TRUE`="darkgreen", `FALSE`="darkred")) +
   labs(title="Mean Attitudes Towards Immigration by country (standardised)", x="Country", y="Mean Attitude Towards Immigration (standardised)")
 
 # GNI per capita across countries
-ggplot(immigration_data.c, aes(x=reorder(country, c_zgni), y=c_zgni)) + geom_bar(stat="identity") +
+ggplot(immigration_data.c, aes(x=reorder(country, c_zgni), y=c_zgni, fill=mean.zimmatt>0)) + geom_bar(stat="identity") +
+  scale_fill_manual(values=c(`TRUE`="darkgreen", `FALSE`="darkred")) +
   labs(title="Gross National Income per capita by country", x="Country", y="GNI per capita (standardised)")
 
 # long term unemployed proportions across countries
-ggplot(immigration_data.c, aes(x=reorder(country, c_ltunemp), y=c_ltunemp)) + geom_bar(stat="identity") +
+ggplot(immigration_data.c, aes(x=reorder(country, c_ltunemp), y=c_ltunemp, fill=mean.zimmatt>0)) + geom_bar(stat="identity") +
+  scale_fill_manual(values=c(`TRUE`="darkgreen", `FALSE`="darkred")) +
   labs(title="Proportion of long-term unemployment by country", x="Country", y="Proportion of Long-term unemployment")
 
 # crude net migration rate across countries 
-ggplot(immigration_data.c, aes(x=reorder(country, c_znetmig), y=c_znetmig)) + geom_bar(stat="identity") +
+ggplot(immigration_data.c, aes(x=reorder(country, c_znetmig), y=c_znetmig, fill=mean.zimmatt>0)) + geom_bar(stat="identity") +
+  scale_fill_manual(values=c(`TRUE`="darkgreen", `FALSE`="darkred")) +
   labs(title="Crude Net Migration Rate by country", x="Country", y="Crude Net Migration Rate (standardised)")
-
-
-
-
-
-
