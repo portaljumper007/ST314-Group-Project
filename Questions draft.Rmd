@@ -8,6 +8,14 @@ date: "2024-02-22"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(dplyr)
+library(expss)
+library(lme4)
+library(sjstats)
+library(ggplot2)
+```
+
 ### Question 2 (i)
 #### Use random effect (RE) models to test for and quantify country effects on attitudes towards immigration
 ```{r}
@@ -15,7 +23,7 @@ knitr::opts_chunk$set(echo = TRUE)
 re_vc_model <- lmer(zimmatt ~ (1 | country), data = immigration_data, REML = FALSE)
 summary(re_vc_model)
 
-performance::icc(re_model)
+performance::icc(re_vc_model)
 ```
 The between-country variance in the attitude towards immigration is 0.1737 and the between-individual within-country variance in the attitude towards immigration is 0.7977. The interclass correlation is estimated at 0.179 which is the proportion of the total variance in attitude towards immigration that can be attributed to differences between countries. ICC can be also interpreted as the correlation between the attitude towards immigration for two randomly selected individuals from the same country.
 
