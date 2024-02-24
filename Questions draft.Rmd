@@ -1,0 +1,148 @@
+---
+title: "Questions"
+output: html_document
+date: "2024-02-22"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Question 2 (i)
+#### Use random effect (RE) models to test for and quantify country effects on attitudes towards immigration
+```{r}
+# Fit a random variance component model
+re_vc_model <- lmer(zimmatt ~ (1 | country), data = immigration_data, REML = FALSE)
+summary(re_vc_model)
+
+performance::icc(re_model)
+```
+The between-country variance in the attitude towards immigration is 0.1737 and the between-individual within-country variance in the attitude towards immigration is 0.7977. The interclass correlation is estimated at 0.179 which is the proportion of the total variance in attitude towards immigration that can be attributed to differences between countries. ICC can be also interpreted as the correlation between the attitude towards immigration for two randomly selected individuals from the same country.
+
+```{r}
+qqnorm(resid(re_vc_model))
+```
+```{r}
+sl_model <- lm(zimmatt ~ 1, data = immigration_data)
+anova(re_vc_model, sl_model)
+
+```
+**Explanation**: The test statistic from the LR test is 5677.9 which is compared with a chi-squared distribution on 1 d.f. To carry out a one-sided test we should halve the p-value, but this would not affect our conclusions because the p-value is already tiny at 2.2 × 10−16. We reject the null hypothesis and conclude that there is significant variation between countries in attitudes towards immigration. This implies that we should select the variance components model over the single-level model that ignores country effects.
+
+
+### Question 2 (ii)
+#### study the effects of individual-level variables on these attitudes 
+```{r}
+# Fit a random intercept model, including all individual-level variables as predictors
+re_intercept_model <- lmer(zimmatt ~ age50 + female + hhnetinc + eduyrs + partner + econact + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_intercept_model)
+
+```
+Starting with the fixed part parameters, the intercept is estimated as -0.790, and the coefficient of each individual-level variables is estimated as -0.0020980, 0.0417368, 0.0308313, 0.0501808, -0.0416848, 0.3165396, -0.0001647, -0.0136658. 
+
+Intercept: -0.790 represents the expected value of attitude towards immigration when all other predictors are held at their reference level.
+
+age50: -0.00209 suggests that a small decrease in positive attitude towards immigration for each year above or below 50. This effect appears to be statistically significant based on the t-value.
+
+female1: 0.04173 suggests that compared to male, being female is associated with a more positive attitude towards immigration, assuming all other variables are held constant.
+
+hhnetinc: 0.03803 shows that higher household net income is associated with a more positive attitude towards immigration.
+
+eduyrs: 0.05018 suggests that each additional year of full-time education completed is associated with a more positive attitude towards immigration.
+
+partner: -0.04168 implies that having a partner is associated with a less positive attitude towards immigration.
+
+econactEducation: 0.3165 indicates that compared to who is now employed, being in education is associated with 0.3165 units more positive attitude towards immigration
+
+econactUnemployed: -0.0001647 indicates that compared to who is now employed, being unemployed is associated with slightly more negative attitude towards immigration. But the t-value suggests that it does not have a statistically significant effect.
+
+econactOutLabourMarket: -0.01366 indicates that compared to who is now employed, being unemployed is associated with more negative attitude towards immigration.
+
+Turning to the random part parameters, after accounting for the effect of each individual-level predictor, the between-country variance in attitude towards immigration is estimated as 0.1463, and within-country variance is estimated as 0.7329. These are the country and individual-level in attitude towards immigration that are not explained by the individual-level predictors.
+
+```{r}
+## Calculate the between-cluster effect and the within-cluster effect for year of full-time education completed
+
+# Calculate the mean education years for each country
+immigration_data <- immigration_data %>%
+  group_by(country) %>%
+  mutate(eduyrs_country_mean = mean(eduyrs, na.rm = TRUE))
+
+# Demean the education years by subtracting the country mean from each individual's education years
+immigration_data <- immigration_data %>%
+  mutate(eduyrs_demeaned = eduyrs - eduyrs_country_mean)
+
+# Fit the random intercept model including both between and within effects of education years
+re_intercept_model_eduyrs <- lmer(zimmatt ~ eduyrs_country_mean + eduyrs_demeaned + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_intercept_model_eduyrs)
+```
+The within-country effect of year of full-time education completed is estimated as 0.1960. The attitude towards immigration is expected to increase by 0.1960 SD units for each 1 SD increase in the year of full-time education completed above its country mean. The between-country effect is estimated as 0.0602. The country mean of the attitude towards immigration is expected to increase 0.0602 SD for each 1 SD increase in the year of full-time education. Both within and between effects are positive, but the between effect is stronger. Both effects are statistically significant at the 5% level. 
+
+#### Write down the equation for the model selected in ii); this should be written in terms of the population parameters𝛽0 etc, not the parameter estimates from the fitted model
+```{r}
+
+
+```
+
+### Question 3 (a)
+If the individual-level variable of interest (years of full-time education completed) is correlated with the unobserved country-level effects, the FE model helps to control for this endogeneity. Since FE models control for all time-invariant differences across countries, any unobserved country-specific effect that could be correlated with the individual's level of education will not bias the estimated effect of education on immigration attitudes.
+
+The FE model estimates the effect of predictors by comparing within-cluster (country) changes over time. If the main interest is to understand how changes in education over time within a country affect attitudes towards immigration, rather than the differences between countries, the FE model is more suitable.
+
+```{r}
+## Visualize the level2 endogeneity
+
+# Calculate within-cluster regression lines for each country
+within_cluster_coefs <- immigration_data %>%
+  group_by(country) %>%
+  do(tidy(lm(zimmatt ~ eduyrs, data = .))) %>%
+  filter(term == "eduyrs") %>%
+  ungroup()
+
+# Prepare a data frame for the regression lines
+regression_lines <- data.frame()
+for (country in unique(within_cluster_coefs$country)) {
+  coef <- within_cluster_coefs$estimate[within_cluster_coefs$country == country]
+  country_data <- immigration_data[immigration_data$country == country, ]
+  regression_lines <- rbind(regression_lines, data.frame(
+    country = country,
+    eduyrs = c(min(country_data$eduyrs), max(country_data$eduyrs)),
+    zimmatt = coef * c(min(country_data$eduyrs), max(country_data$eduyrs))
+  ))
+}
+
+# Calculate between-cluster coefficient
+between_cluster_model <- lmer(zimmatt ~ (1|country) + eduyrs, data = immigration_data)
+between_cluster_coef <- fixef(between_cluster_model)["eduyrs"]
+between_cluster_intercept <- fixef(between_cluster_model)["(Intercept)"]
+
+ggplot(immigration_data, aes(x = eduyrs, y = zimmatt)) +
+  geom_point(color = "black", alpha = 0.5) +
+  geom_line(data = regression_lines, aes(x = eduyrs, y = zimmatt, group = country), color = "blue", linetype = "dashed") +
+   geom_abline(intercept = between_cluster_intercept, slope = between_cluster_coef, color = "red", linetype = "dashed") +
+  labs(x = "Years of Full-time Education (eduyrs)", 
+       y = "Attitude towards Immigration (zimmatt)", 
+       title = "Attitude towards Immigration vs Education Years") +
+  theme_minimal()
+
+```
+**Interpretation of the plot**: 
+The red line represents the between-cluster regression line, while the blue lines represent the within-cluster regression lines for each country. The slopes of the blue lines vary between countries, indicating that the relationship between education and attitudes towards immigration is not consistent across all countries.
+
+Since the red line has a different slope than the blue lines, this indicates that there is variation in the effect of eduyrs on zimmatt that is due to differences between countries, which is a sign of level 2 endogeneity. This means that the effect of education on attitudes toward immigration cannot be fully understood without considering the country-level context.
+
+### Question 3 (b) 
+#### Write down the equation for an extension of the RE model in 2) that addresses the researcher’s concerns. Fit this model and, based on the results, discuss the relationship between attitudes towards immigration and education.
+
+An unbiased estimate of the coefficient of eduyrs can be obtained if the cluster mean of eduyrs is included as a covariate. 
+```{r}
+# 
+
+```
+
+### Question 4
+#### Building on the RE model fitted in 3b), study the effects of the three country-level variables on attitudes towards immigration.
+```{r}
+
+
+```
