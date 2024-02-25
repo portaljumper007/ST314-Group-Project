@@ -86,11 +86,40 @@ summary(re_intercept_model_eduyrs)
 ```
 The within-country effect of year of full-time education completed is estimated as 0.1960. The attitude towards immigration is expected to increase by 0.1960 SD units for each 1 SD increase in the year of full-time education completed above its country mean. The between-country effect is estimated as 0.0602. The country mean of the attitude towards immigration is expected to increase 0.0602 SD for each 1 SD increase in the year of full-time education. Both within and between effects are positive, but the between effect is stronger. Both effects are statistically significant at the 5% level. 
 
-#### Write down the equation for the model selected in ii); this should be written in terms of the population parameters𝛽0 etc, not the parameter estimates from the fitted model
-```{r}
+#### Model interpretation
 
+The assumptions of the random effects model:
 
-```
+Normality: The random effects and the residuals are normally distributed.
+Independence: Observations are independent across groups (countries).
+Homoscedasticity: Constant variance of residuals within groups.
+No multicollinearity: Independent variables are not too highly correlated.
+Random sampling: Data are a random sample from the population.
+
+Model equation:
+
+\[
+zimmatt_{ij} = \beta_0 + \beta_1 \cdot \text{age50}_{ij} + \beta_2 \cdot \text{female}_{ij} + \beta_3 \cdot \text{hhnetinc}_{ij} + \beta_4 \cdot \text{eduyrs}_{ij} + \beta_5 \cdot \text{partner}_{ij} + \beta_6 \cdot \text{econact}_{ij} + u_{0j} + \epsilon_{ij}
+\]
+
+Full interpretation of the model:
+
+Intercept (
+�
+0
+β 
+0
+​
+ ): Represents the baseline attitude towards immigration when all predictors are at their reference levels, essentially serving as the starting point for our analysis.
+
+Individual-Level Predictors: Each coefficient indicates the expected change in attitude towards immigration for a one-unit change in the predictor, holding all other variables constant. A positive value suggests a predictor increases positive attitudes towards immigration, whereas a negative value suggests it decreases them. This allows us to quantify the specific impact of individual factors such as age, gender, income, education, partnership status, and economic activity on immigration attitudes.
+
+Random Intercept: Captures unobserved country-specific effects, acknowledging that attitudes are not only shaped by personal factors but also by the broader country context. This acknowledges the intrinsic correlation of responses within the same country, offering insight into how much of the variation in attitudes can be attributed to country-level differences.
+
+Model Assumptions: Critical for the validity of our conclusions. We assume that errors and random effects are normally distributed, which is foundational for generating reliable confidence intervals and hypothesis tests. Independence of observations is assumed within and across countries, and the model presumes homoscedasticity - constant variance of error terms. Violations of these assumptions can lead to biased estimates and incorrect inferences.
+
+This model accounts for complex patterns in the determinants of immigration attitudes, illustrating the significant role of both individual attributes and country-specific contexts. By including a random intercept for countries, we're able to capture unobserved heterogeneity at the country level, providing a more accurate and nuanced analysis. However, it's crucial to remember that correlation does not imply causation, and the presence of unmeasured confounding variables could influence these relationships. Therefore, interpretations should be made cautiously, with an understanding that this model provides a snapshot of associations rather than definitive causal relationships.
+
 
 ### Question 3 (a)
 If the individual-level variable of interest (years of full-time education completed) is correlated with the unobserved country-level effects, the FE model helps to control for this endogeneity. Since FE models control for all time-invariant differences across countries, any unobserved country-specific effect that could be correlated with the individual's level of education will not bias the estimated effect of education on immigration attitudes.
@@ -144,13 +173,36 @@ Since the red line has a different slope than the blue lines, this indicates tha
 
 An unbiased estimate of the coefficient of eduyrs can be obtained if the cluster mean of eduyrs is included as a covariate. 
 ```{r}
-# 
+# Extend the RE model by including the cluster mean of education years as a covariate
+re_extended_model <- lmer(zimmatt ~ eduyrs + eduyrs_country_mean + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_extended_model)
+
+# The extended model now includes the individual education years (eduyrs), the cluster (country) mean of education years (eduyrs_country_mean), and random intercepts for countries.
+
+# The coefficient for eduyrs represents the within-country effect of education on attitudes towards immigration, controlling for the average education level in the country.
+# The coefficient for eduyrs_country_mean represents the between-country effect, capturing how differences in average education levels across countries relate to attitudes towards immigration.
+
 
 ```
 
 ### Question 4
-#### Building on the RE model fitted in 3b), study the effects of the three country-level variables on attitudes towards immigration.
+#Building on the RE model fitted in 3b), study the effects of the three country-level variables on attitudes towards immigration.
 ```{r}
-
+# Extend the RE model to include three country-level variables
+names(immigration_data) #print out column names to identify the 3 country level variables
+re_extended_model_with_country_vars <- lmer(zimmatt ~ eduyrs + eduyrs_country_mean + c_zgni + c_ltunemp + c_znetmig + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_extended_model_with_country_vars)
 
 ```
+#Analysis of the three country-level variables:
+
+Gross National Income (GNI) per capita (c_zgni): The coefficient of 0.210235 indicates a positive relationship between GNI per capita and attitudes towards immigration. This suggests that, holding other factors constant, a one-unit increase in the standardized GNI per capita is associated with a 0.210235 unit increase in the attitude towards immigration. The statistical significance (t value = 3.025) underscores that higher income levels at the country level are correlated with more positive attitudes towards immigration. This could be interpreted as wealthier countries exhibiting more openness or positive sentiments towards immigrants, possibly due to better economic conditions or a perception of immigrants contributing to economic growth.
+
+Long-term unemployment rate (c_ltunemp): The coefficient of -0.404418 suggests a negative association between the long-term unemployment rate and attitudes towards immigration, although the t value of -0.790 indicates this effect is not statistically significant at conventional levels. The negative sign aligns with the hypothesis that higher unemployment might lead to more negative attitudes towards immigrants, potentially due to perceived competition for jobs. However, the lack of statistical significance suggests caution in interpreting this effect as definitive without further study.
+
+Net migration (c_znetmig): With a coefficient of 0.008170 and a t value of 0.128, the relationship between net migration and attitudes towards immigration is positive but not statistically significant. This indicates that, while a higher net migration rate might be expected to correlate with more positive or negative attitudes towards immigrants, depending on the context, the evidence from this model does not support a strong conclusion either way.
+
+## Question 5
+
+#Summary of Q4
+The analysis suggests that country-level economic prosperity, as measured by GNI per capita, is positively correlated with more favorable attitudes towards immigration. This finding supports theories that economic stability and prosperity may foster more openness and positive sentiments towards immigrants. In contrast, the effects of long-term unemployment and net migration on immigration attitudes are not statistically significant in this model, indicating that these factors, at least as modeled here, do not have a clear-cut impact on attitudes towards immigration across the studied countries.
