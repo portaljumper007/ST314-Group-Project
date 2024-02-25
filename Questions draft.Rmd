@@ -177,13 +177,20 @@ An unbiased estimate of the coefficient of eduyrs can be obtained if the cluster
 re_extended_model <- lmer(zimmatt ~ eduyrs + eduyrs_country_mean + (1 | country), data = immigration_data, REML = FALSE)
 summary(re_extended_model)
 
-# The extended model now includes the individual education years (eduyrs), the cluster (country) mean of education years (eduyrs_country_mean), and random intercepts for countries.
-
-# The coefficient for eduyrs represents the within-country effect of education on attitudes towards immigration, controlling for the average education level in the country.
-# The coefficient for eduyrs_country_mean represents the between-country effect, capturing how differences in average education levels across countries relate to attitudes towards immigration.
-
-
 ```
+
+The extended model now includes the individual education years (eduyrs), the cluster (country) mean of education years (eduyrs_country_mean), and random intercepts for countries.
+
+The coefficient for eduyrs represents the within-country effect of education on attitudes towards immigration, controlling for the average education level in the country.
+The coefficient for eduyrs_country_mean represents the between-country effect, capturing how differences in average education levels across countries relate to attitudes towards immigration.
+
+#Interpretation of Fixed Effects:
+Individual Education Years (eduyrs): The coefficient for eduyrs is 0.060232, indicating a positive and statistically significant relationship between an individual's education years and their attitude towards immigration. Specifically, for each additional year of education that an individual completes, their attitude towards immigration improves by 0.060232 units. This effect is substantial (t value = 46.735), suggesting a strong and positive influence of personal education on immigration attitudes. This finding aligns with theories suggesting that higher education levels may lead to more openness and a better understanding of the benefits of immigration, such as cultural diversity and economic contributions.
+
+Cluster Mean of Education Years (eduyrs_country_mean): The coefficient for eduyrs_country_mean is 0.135837, also indicating a positive relationship, but this time at the country level. This effect is statistically significant (t value = 2.005), suggesting that countries with higher average education levels tend to have more positive attitudes towards immigration. This between-country effect may reflect broader educational influences on societal attitudes, including the role of education in shaping national identity, social cohesion, and economic perspectives on immigration.
+
+#Random Effects:
+The variance component for the country random intercept is 0.1324, with a standard deviation of 0.3639. This indicates variability in immigration attitudes across countries, not explained by the model's fixed effects. The presence of significant random effects underscores the importance of considering country-specific factors and contexts in understanding attitudes towards immigration.
 
 ### Question 4
 #Building on the RE model fitted in 3b), study the effects of the three country-level variables on attitudes towards immigration.
