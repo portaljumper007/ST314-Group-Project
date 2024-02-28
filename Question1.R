@@ -3,6 +3,8 @@ library(expss)
 library(lme4)
 library(sjstats)
 library(ggplot2)
+library(tidymodels)
+
 
 immigration_data <- read.csv(file="immigration.csv")
 head(immigration_data)
@@ -73,3 +75,4 @@ ggplot(immigration_data.c, aes(x=reorder(country, c_ltunemp), y=c_ltunemp, fill=
 ggplot(immigration_data.c, aes(x=reorder(country, c_znetmig), y=c_znetmig, fill=mean.zimmatt>0)) + geom_bar(stat="identity") +
   scale_fill_manual(values=c(`TRUE`="darkgreen", `FALSE`="darkred")) +
   labs(title="Crude Net Migration Rate by country", x="Country", y="Crude Net Migration Rate (standardised)")
+
