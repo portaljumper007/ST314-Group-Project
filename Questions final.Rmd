@@ -1,0 +1,358 @@
+---
+title: "Questions"
+output: html_document
+date: "2024-02-22"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(expss)
+library(lme4)
+library(sjstats)
+library(ggplot2)
+library(tidymodels)
+
+
+immigration_data <- read.csv("immigration.csv")
+head(immigration_data)
+
+## Question 1
+
+## Exploratory Analysis
+# Correlation analysis
+cor_matrix <- cor(immigration_data[, c("age50", "female", "hhnetinc", "eduyrs", "partner", "econact")])
+cor_matrix
+```
+The correlation matrix suggests that:
+There is a very weak positive correlation between age and gender / age and partner / gender and education years completed / gender and economic activity / education years completed and partner.
+There is a very weak negative correlation between gender and partner / partner and economic activity.
+There is a moderate negative correlation between age and net income (-0.238)/ age and education years completed (-0.240) / gender and net income (-0.106) / education years completed and economic activity (-0.293).
+There is a moderately strong correlation between net income and education years completed (0.349) / net income and partner (0.386) / net income and economic activity (-0.387).
+There is a strong correlation between age and economic activity (0.551).
+
+We could consider the interactions between predictors that have strong correlations with each other.
+
+```{r}
+# making 'econact' a factor
+class(immigration_data$econact)
+immigration_data <- apply_labels(immigration_data, econact=c("Employed"= 1, "Education"= 2, "Unemployed"= 3, "OutLabourMarket"= 4))
+immigration_data$econact <- as.factor(immigration_data$econact)
+class(immigration_data$econact)
+
+# making 'female' a factor
+class(immigration_data$female)
+immigration_data$female <- as.factor(immigration_data$female)
+class(immigration_data$female)
+
+# making 'partner' a factor
+class(immigration_data$partner)
+immigration_data$partner <- as.factor(immigration_data$partner)
+class(immigration_data$partner)
+
+# simple data analysis of variables
+nrow(immigration_data) # there are 33706 observations
+length(unique(immigration_data$country)) # there are 27 countries
+(table(immigration_data$country)) # sample size of each country
+sd(immigration_data$zimmatt) # zimmatt standard deviation
+mean(immigration_data$eduyrs, na.rm=TRUE) # education mean
+(table(immigration_data$female)["0"])/(table(immigration_data$female)["0"] + table(immigration_data$female)["1"]) * 100 # percentage of males
+
+# labour market country breakdown ('econact')
+countries_labour_market <- immigration_data %>%
+  group_by(country) %>%
+  summarise(Employed_percent = round(sum(econact == "Employed", na.rm = TRUE) / n() * 100, 1),
+    Education_percent = round(sum(econact == "Education", na.rm = TRUE) / n() * 100, 1),
+    Unemployed_percent = round(sum(econact == "Unemployed", na.rm = TRUE) / n() * 100, 1),
+    OutLabourMarket_percent = round(sum(econact == "OutLabourMarket", na.rm = TRUE) / n() * 100, 1), .groups = 'drop')
+countries_labour_market %>% arrange(desc(Employed_percent)) # most employed people % countries in order
+countries_labour_market %>% arrange(desc(Unemployed_percent)) # most unemployed people % countries in order
+
+# new dataset for all countries
+immigration_data.c <- immigration_data %>%
+  group_by(country) %>%
+  summarise(country = first(country), nind = n(), mean.zimmatt = mean(zimmatt), c_zgni = first(c_zgni), c_ltunemp = first(c_ltunemp), c_znetmig = first(c_znetmig))
+immigration_data.c$mean.zimmatt <- round(immigration_data.c$mean.zimmatt, digits = 2)
+print(immigration_data.c, n = 27)
+
+## Graphs
+
+# countries' attitudes towards immigration
+ggplot(immigration_data.c, aes(x=reorder(country, mean.zimmatt), y=mean.zimmatt, fill=mean.zimmatt>0)) + geom_bar(stat="identity") +
+  scale_fill_manual(values=c(`TRUE`="darkgreen", `FALSE`="darkred")) +
+  labs(title="Mean Attitudes Towards Immigration by country (standardised)", x="Country", y="Mean Attitude Towards Immigration (standardised)")
+
+# GNI per capita across countries
+ggplot(immigration_data.c, aes(x=reorder(country, c_zgni), y=c_zgni, fill=mean.zimmatt>0)) + geom_bar(stat="identity") +
+  scale_fill_manual(values=c(`TRUE`="darkgreen", `FALSE`="darkred")) +
+  labs(title="Gross National Income per capita by country", x="Country", y="GNI per capita (standardised)")
+
+# long term unemployed proportions across countries
+ggplot(immigration_data.c, aes(x=reorder(country, c_ltunemp), y=c_ltunemp, fill=mean.zimmatt>0)) + geom_bar(stat="identity") +
+  scale_fill_manual(values=c(`TRUE`="darkgreen", `FALSE`="darkred")) +
+  labs(title="Proportion of long-term unemployment by country", x="Country", y="Proportion of Long-term unemployment")
+
+# crude net migration rate across countries 
+ggplot(immigration_data.c, aes(x=reorder(country, c_znetmig), y=c_znetmig, fill=mean.zimmatt>0)) + geom_bar(stat="identity") +
+  scale_fill_manual(values=c(`TRUE`="darkgreen", `FALSE`="darkred")) +
+  labs(title="Crude Net Migration Rate by country", x="Country", y="Crude Net Migration Rate (standardised)")
+```
+
+### Question 2 (i)
+#### Use random effect (RE) models to test for and quantify country effects on attitudes towards immigration
+```{r}
+# Fit a random variance component model
+re_vc_model <- lmer(zimmatt ~ (1 | country), data = immigration_data, REML = FALSE)
+summary(re_vc_model)
+
+performance::icc(re_vc_model)
+```
+The between-country variance in the attitude towards immigration is 0.1737 and the between-individual within-country variance in the attitude towards immigration is 0.7977. The interclass correlation is estimated at 0.179 which is the proportion of the total variance in attitude towards immigration that can be attributed to differences between countries. ICC can be also interpreted as the correlation between the attitude towards immigration for two randomly selected individuals from the same country.
+
+```{r}
+qqnorm(resid(re_vc_model))
+```
+```{r}
+sl_model <- lm(zimmatt ~ 1, data = immigration_data)
+anova(re_vc_model, sl_model)
+
+```
+**Explanation**: The test statistic from the LR test is 5677.9 which is compared with a chi-squared distribution on 1 d.f. To carry out a one-sided test we should halve the p-value, but this would not affect our conclusions because the p-value is already tiny at 2.2 × 10−16. We reject the null hypothesis and conclude that there is significant variation between countries in attitudes towards immigration. This implies that we should select the variance components model over the single-level model that ignores country effects.
+
+
+### Question 2 (ii)
+#### study the effects of individual-level variables on these attitudes
+```{r}
+# Use univariate random intercept models to study each individual-level variables
+re_model_age <- lmer(zimmatt ~ age50 + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_model_age)
+
+re_model_gender <- lmer(zimmatt ~ female + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_model_gender)
+
+re_model_income <- lmer(zimmatt ~ hhnetinc + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_model_income)
+
+re_model_edu <- lmer(zimmatt ~ eduyrs + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_model_edu)
+
+re_model_partner <- lmer(zimmatt ~ partner + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_model_partner)
+
+re_model_econ <- lmer(zimmatt ~ econact + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_model_econ)
+```
+The univariate models suggest that age, gender, household income, education years, and economic activity are significant predictors of attitudes towards immigration, with varying degrees of association. Gender and higher income are linked to more positive attitudes, while older age is associated with less positive attitudes. Higher education is a strong predictor of positive attitudes towards immigration. Economic activity status impacts attitudes differently, with those in education being more positive, while unemployment correlates with more negative attitudes. Partner status does not significantly affect attitudes in the univariate model.
+
+Significant variance between countries is noted in all models, justifying the inclusion of country as a random effect in the final model. Lower AIC and BIC values for income and education models indicate better fits compared to others. These results help prioritize which variables to include in the final multilevel model, aiming for a balance of statistical significance, theoretical relevance, and model fit.
+
+```{r}
+# Fit a random intercept model including age, gender, household income, education years, and economic activity
+re_model_1 <- lmer(zimmatt ~ age50 + female + hhnetinc + eduyrs + econact + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_model_1)
+```
+
+```{r}
+# Fit a random intercept model, including all individual-level variables as predictors
+re_model_full <- lmer(zimmatt ~ age50 + female + hhnetinc + eduyrs + partner + econact + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_model_full) 
+# Since full model has a smaller AIC than the previous one, we will use full model as the base 
+```
+Starting with the fixed part parameters, the intercept is estimated as -0.790, and the coefficient of each individual-level variables is estimated as -0.0020980, 0.0417368, 0.0308313, 0.0501808, -0.0416848, 0.3165396, -0.0001647, -0.0136658. 
+
+Intercept: -0.790 represents the expected value of attitude towards immigration when all other predictors are held at their reference level.
+
+age50: -0.00209 suggests that a small decrease in positive attitude towards immigration for each year above or below 50. This effect appears to be statistically significant based on the t-value.
+
+female1: 0.04173 suggests that compared to male, being female is associated with a more positive attitude towards immigration, assuming all other variables are held constant.
+
+hhnetinc: 0.03803 shows that higher household net income is associated with a more positive attitude towards immigration.
+
+eduyrs: 0.05018 suggests that each additional year of full-time education completed is associated with a more positive attitude towards immigration.
+
+partner: -0.04168 implies that having a partner is associated with a less positive attitude towards immigration.
+
+econactEducation: 0.3165 indicates that compared to who is now employed, being in education is associated with 0.3165 units more positive attitude towards immigration
+
+econactUnemployed: -0.0001647 indicates that compared to who is now employed, being unemployed is associated with slightly more negative attitude towards immigration. But the t-value suggests that it does not have a statistically significant effect.
+
+econactOutLabourMarket: -0.01366 indicates that compared to who is now employed, being unemployed is associated with more negative attitude towards immigration.
+
+Turning to the random part parameters, after accounting for the effect of each individual-level predictor, the between-country variance in attitude towards immigration is estimated as 0.1463, and within-country variance is estimated as 0.7329. These are the country and individual-level in attitude towards immigration that are not explained by the individual-level predictors.
+
+```{r}
+## Try different interactions based on full model
+
+# Add the interaction between age50 and econact
+re_model_2 <- lmer(zimmatt ~ age50*econact + female + hhnetinc + eduyrs + partner +  (1 | country), data = immigration_data, REML = FALSE)
+summary(re_model_2) # Compared to the full model, AIC value decreases
+# After adding the interaction term, econact itself is not significant
+
+# Add the interaction between age and econact, and remove econact
+re_model_3 <- lmer(zimmatt ~ age50 + age50:econact + female + hhnetinc + eduyrs + partner +  (1 | country), data = immigration_data, REML = FALSE)
+summary(re_model_3) 
+
+anova(re_model_2, re_model_3) 
+# Since model 2 provides a significantly better fit to the data than model 3, and it has a lower AIC value, we continue with model 2
+
+# Add the interaction between hhnetinc and eduyrs based on model 2
+re_model_4 <- lmer(zimmatt ~ age50*econact + female + hhnetinc*eduyrs + partner +  (1 | country), data = immigration_data, REML = FALSE)
+summary(re_model_4) 
+
+anova(re_model_2, re_model_4)
+# Since model 4 provides a significantly better fit to the data than model 2, and it has a lower AIC value, we continue with model 4
+
+# Add the interaction between hhnetinc and econact based on model 4
+re_model_5 <- lmer(zimmatt ~ age50*econact + female + hhnetinc*econact + partner + hhnetinc*eduyrs  +  (1 | country), data = immigration_data, REML = FALSE)
+summary(re_model_5) 
+
+anova(re_model_4, re_model_5)
+# Since model 5 provides a significantly better fit to the data than model 2, and it has a lower AIC value, we continue with model 5
+
+anova(re_model_full, re_model_5)
+# Therefore, re_model_5 will be our final model at this stage
+```
+The final model is chosen because it best captures how different factors combine to affect attitudes towards immigration. Interaction terms such as age50:econact and hhnetinc:eduyrs are significant, indicating that the effect of age on immigration attitudes varies with economic activity and that the relationship between household income and years of education is not simply additive but multiplicative. Even though the main effect of hhnetinc is not significant, it is retained in the model to maintain the hierarchical structure of the terms and to provide context for the interaction terms. The inclusion of the main effect ensures that the interaction terms represent the additional effect of one variable at different levels of another variable, not the total effect of either variable. The model is chosen based on a balance of statistical evidence from ANOVA tests, lower AIC values indicating better fit with parsimony, and theoretical justification. Each predictor and interaction term included has been shown to contribute meaningfully to the model's explanatory power.
+
+```{r}
+## Calculate the between-cluster effect and the within-cluster effect for year of full-time education completed
+
+# Calculate the mean education years for each country
+immigration_data <- immigration_data %>%
+  group_by(country) %>%
+  mutate(eduyrs_country_mean = mean(eduyrs, na.rm = TRUE))
+
+# Demean the education years by subtracting the country mean from each individual's education years
+immigration_data <- immigration_data %>%
+  mutate(eduyrs_demeaned = eduyrs - eduyrs_country_mean)
+
+# Fit the random intercept model including both between and within effects of education years
+re_intercept_model_eduyrs <- lmer(zimmatt ~ eduyrs_country_mean + eduyrs_demeaned + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_intercept_model_eduyrs)
+```
+The within-country effect of year of full-time education completed is estimated as 0.1960. The attitude towards immigration is expected to increase by 0.1960 SD units for each 1 SD increase in the year of full-time education completed above its country mean. The between-country effect is estimated as 0.0602. The country mean of the attitude towards immigration is expected to increase 0.0602 SD for each 1 SD increase in the year of full-time education. Both within and between effects are positive, but the between effect is stronger. Both effects are statistically significant at the 5% level. 
+
+#### Model interpretation
+
+The assumptions of the random effects model:
+
+Normality: The random effects and the residuals are normally distributed.
+Independence: Observations are independent across groups (countries).
+Homoscedasticity: Constant variance of residuals within groups.
+No multicollinearity: Independent variables are not too highly correlated.
+Random sampling: Data are a random sample from the population.
+
+Model equation:
+
+\[
+zimmatt_{ij} = \beta_0 + \beta_1 \cdot \text{age50}_{ij} + \beta_2 \cdot \text{female}_{ij} + \beta_3 \cdot \text{hhnetinc}_{ij} + \beta_4 \cdot \text{eduyrs}_{ij} + \beta_5 \cdot \text{partner}_{ij} + \beta_6 \cdot \text{econact}_{ij} + u_{0j} + \epsilon_{ij}
+\]
+
+Full interpretation of the model:
+
+Intercept: Represents the baseline attitude towards immigration when all predictors are at their reference levels, essentially serving as the starting point for our analysis.
+
+Individual-Level Predictors: Each coefficient indicates the expected change in attitude towards immigration for a one-unit change in the predictor, holding all other variables constant. A positive value suggests a predictor increases positive attitudes towards immigration, whereas a negative value suggests it decreases them. This allows us to quantify the specific impact of individual factors such as age, gender, income, education, partnership status, and economic activity on immigration attitudes.
+
+Random Intercept: Captures unobserved country-specific effects, acknowledging that attitudes are not only shaped by personal factors but also by the broader country context. This acknowledges the intrinsic correlation of responses within the same country, offering insight into how much of the variation in attitudes can be attributed to country-level differences.
+
+Model Assumptions: Critical for the validity of our conclusions. We assume that errors and random effects are normally distributed, which is foundational for generating reliable confidence intervals and hypothesis tests. Independence of observations is assumed within and across countries, and the model presumes homoscedasticity - constant variance of error terms. Violations of these assumptions can lead to biased estimates and incorrect inferences.
+
+This model accounts for complex patterns in the determinants of immigration attitudes, illustrating the significant role of both individual attributes and country-specific contexts. By including a random intercept for countries, we're able to capture unobserved heterogeneity at the country level, providing a more accurate and nuanced analysis. However, it's crucial to remember that correlation does not imply causation, and the presence of unmeasured confounding variables could influence these relationships. Therefore, interpretations should be made cautiously, with an understanding that this model provides a snapshot of associations rather than definitive causal relationships.
+
+
+### Question 3 (a)
+If the individual-level variable of interest (years of full-time education completed) is correlated with the unobserved country-level effects, the FE model helps to control for this endogeneity. Since FE models control for all time-invariant differences across countries, any unobserved country-specific effect that could be correlated with the individual's level of education will not bias the estimated effect of education on immigration attitudes.
+
+The FE model estimates the effect of predictors by comparing within-cluster (country) changes over time. If the main interest is to understand how changes in education over time within a country affect attitudes towards immigration, rather than the differences between countries, the FE model is more suitable.
+
+```{r}
+## Visualize the level2 endogeneity
+
+# Calculate within-cluster regression lines for each country
+within_cluster_coefs <- immigration_data %>%
+  group_by(country) %>%
+  do(tidy(lm(zimmatt ~ eduyrs, data = .))) %>%
+  filter(term == "eduyrs") %>%
+  ungroup()
+
+# Prepare a data frame for the regression lines
+regression_lines <- data.frame()
+for (country in unique(within_cluster_coefs$country)) {
+  coef <- within_cluster_coefs$estimate[within_cluster_coefs$country == country]
+  country_data <- immigration_data[immigration_data$country == country, ]
+  regression_lines <- rbind(regression_lines, data.frame(
+    country = country,
+    eduyrs = c(min(country_data$eduyrs), max(country_data$eduyrs)),
+    zimmatt = coef * c(min(country_data$eduyrs), max(country_data$eduyrs))
+  ))
+}
+
+# Calculate between-cluster coefficient
+between_cluster_model <- lmer(zimmatt ~ (1|country) + eduyrs, data = immigration_data)
+between_cluster_coef <- fixef(between_cluster_model)["eduyrs"]
+between_cluster_intercept <- fixef(between_cluster_model)["(Intercept)"]
+
+ggplot(immigration_data, aes(x = eduyrs, y = zimmatt)) +
+  geom_point(color = "black", alpha = 0.5) +
+  geom_line(data = regression_lines, aes(x = eduyrs, y = zimmatt, group = country), color = "blue", linetype = "dashed") +
+   geom_abline(intercept = between_cluster_intercept, slope = between_cluster_coef, color = "red", linetype = "dashed") +
+  labs(x = "Years of Full-time Education (eduyrs)", 
+       y = "Attitude towards Immigration (zimmatt)", 
+       title = "Attitude towards Immigration vs Education Years") +
+  theme_minimal()
+
+```
+**Interpretation of the plot**: 
+The red line represents the between-cluster regression line, while the blue lines represent the within-cluster regression lines for each country. The slopes of the blue lines vary between countries, indicating that the relationship between education and attitudes towards immigration is not consistent across all countries.
+
+Since the red line has a different slope than the blue lines, this indicates that there is variation in the effect of eduyrs on zimmatt that is due to differences between countries, which is a sign of level 2 endogeneity. This means that the effect of education on attitudes toward immigration cannot be fully understood without considering the country-level context.
+
+### Question 3 (b) 
+#### Write down the equation for an extension of the RE model in 2) that addresses the researcher’s concerns. Fit this model and, based on the results, discuss the relationship between attitudes towards immigration and education.
+
+An unbiased estimate of the coefficient of eduyrs can be obtained if the cluster mean of eduyrs is included as a covariate. 
+```{r}
+# Extend the RE model by including the cluster mean of education years as a covariate
+re_extended_model <- lmer(zimmatt ~ eduyrs + eduyrs_country_mean + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_extended_model)
+
+```
+
+The extended model now includes the individual education years (eduyrs), the cluster (country) mean of education years (eduyrs_country_mean), and random intercepts for countries.
+
+The coefficient for eduyrs represents the within-country effect of education on attitudes towards immigration, controlling for the average education level in the country.
+The coefficient for eduyrs_country_mean represents the between-country effect, capturing how differences in average education levels across countries relate to attitudes towards immigration.
+
+#Interpretation of Fixed Effects:
+Individual Education Years (eduyrs): The coefficient for eduyrs is 0.060232, indicating a positive and statistically significant relationship between an individual's education years and their attitude towards immigration. Specifically, for each additional year of education that an individual completes, their attitude towards immigration improves by 0.060232 units. This effect is substantial (t value = 46.735), suggesting a strong and positive influence of personal education on immigration attitudes. This finding aligns with theories suggesting that higher education levels may lead to more openness and a better understanding of the benefits of immigration, such as cultural diversity and economic contributions.
+
+Cluster Mean of Education Years (eduyrs_country_mean): The coefficient for eduyrs_country_mean is 0.135837, also indicating a positive relationship, but this time at the country level. This effect is statistically significant (t value = 2.005), suggesting that countries with higher average education levels tend to have more positive attitudes towards immigration. This between-country effect may reflect broader educational influences on societal attitudes, including the role of education in shaping national identity, social cohesion, and economic perspectives on immigration.
+
+#Random Effects:
+The variance component for the country random intercept is 0.1324, with a standard deviation of 0.3639. This indicates variability in immigration attitudes across countries, not explained by the model's fixed effects. The presence of significant random effects underscores the importance of considering country-specific factors and contexts in understanding attitudes towards immigration.
+
+### Question 4
+#Building on the RE model fitted in 3b), study the effects of the three country-level variables on attitudes towards immigration.
+```{r}
+# Extend the RE model to include three country-level variables
+names(immigration_data) #print out column names to identify the 3 country level variables
+re_extended_model_with_country_vars <- lmer(zimmatt ~ eduyrs + eduyrs_country_mean + c_zgni + c_ltunemp + c_znetmig + (1 | country), data = immigration_data, REML = FALSE)
+summary(re_extended_model_with_country_vars)
+
+```
+#Analysis of the three country-level variables:
+
+Gross National Income (GNI) per capita (c_zgni): The coefficient of 0.210235 indicates a positive relationship between GNI per capita and attitudes towards immigration. This suggests that, holding other factors constant, a one-unit increase in the standardized GNI per capita is associated with a 0.210235 unit increase in the attitude towards immigration. The statistical significance (t value = 3.025) underscores that higher income levels at the country level are correlated with more positive attitudes towards immigration. This could be interpreted as wealthier countries exhibiting more openness or positive sentiments towards immigrants, possibly due to better economic conditions or a perception of immigrants contributing to economic growth.
+
+Long-term unemployment rate (c_ltunemp): The coefficient of -0.404418 suggests a negative association between the long-term unemployment rate and attitudes towards immigration, although the t value of -0.790 indicates this effect is not statistically significant at conventional levels. The negative sign aligns with the hypothesis that higher unemployment might lead to more negative attitudes towards immigrants, potentially due to perceived competition for jobs. However, the lack of statistical significance suggests caution in interpreting this effect as definitive without further study.
+
+Net migration (c_znetmig): With a coefficient of 0.008170 and a t value of 0.128, the relationship between net migration and attitudes towards immigration is positive but not statistically significant. This indicates that, while a higher net migration rate might be expected to correlate with more positive or negative attitudes towards immigrants, depending on the context, the evidence from this model does not support a strong conclusion either way.
+
+## Question 5
+
+#Summary of Q4
+The analysis suggests that country-level economic prosperity, as measured by GNI per capita, is positively correlated with more favorable attitudes towards immigration. This finding supports theories that economic stability and prosperity may foster more openness and positive sentiments towards immigrants. In contrast, the effects of long-term unemployment and net migration on immigration attitudes are not statistically significant in this model, indicating that these factors, at least as modeled here, do not have a clear-cut impact on attitudes towards immigration across the studied countries.
