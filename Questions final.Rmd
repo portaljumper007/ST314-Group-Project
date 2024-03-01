@@ -237,31 +237,33 @@ The within-country effect of year of full-time education completed is estimated 
 
 #### Model interpretation
 
-The assumptions of the random effects model:
+Model Assumptions and Equation for the Final Model
 
-Normality: The random effects and the residuals are normally distributed.
-Independence: Observations are independent across groups (countries).
-Homoscedasticity: Constant variance of residuals within groups.
-No multicollinearity: Independent variables are not too highly correlated.
-Random sampling: Data are a random sample from the population.
+The final model incorporates a complex interaction between individual-level predictors and economic activity status, making for a good model for attitudes towards immigration. This model adheres to the standard assumptions of random effects models, including:
 
-Model equation:
+Normality: Both the random effects and the residuals are assumed to follow a normal distribution.
+Independence: Observations are considered independent across and within groups (countries).
+Homoscedasticity: There is a constant variance of residuals within groups.
+No Multicollinearity: Predictors are not excessively correlated, allowing for reliable estimation of their individual effects.
+Random Sampling: The data represent a random sample from the broader population.
 
 \[
-zimmatt_{ij} = \beta_0 + \beta_1 \cdot \text{age50}_{ij} + \beta_2 \cdot \text{female}_{ij} + \beta_3 \cdot \text{hhnetinc}_{ij} + \beta_4 \cdot \text{eduyrs}_{ij} + \beta_5 \cdot \text{partner}_{ij} + \beta_6 \cdot \text{econact}_{ij} + u_{0j} + \epsilon_{ij}
+zimmatt_{ij} = \beta_0 + \beta_1 \cdot \text{age50}_{ij} + \beta_2 \cdot \text{female}_{ij} + \beta_3 \cdot \text{hhnetinc}_{ij} + \beta_4 \cdot \text{eduyrs}_{ij} + \beta_5 \cdot \text{partner}_{ij} + \beta_6 \cdot \text{econactEducation}_{ij} + \beta_7 \cdot \text{econactUnemployed}_{ij} + \beta_8 \cdot \text{econactOutLabourMarket}_{ij} + \beta_9 \cdot (\text{age50} \times \text{econact})_{ij} + \beta_{10} \cdot (\text{hhnetinc} \times \text{econact})_{ij} + \beta_{11} \cdot (\text{hhnetinc} \times \text{eduyrs})_{ij} + u_{0j} + \epsilon_{ij}
+
 \]
 
 Full interpretation of the model:
 
-Intercept: Represents the baseline attitude towards immigration when all predictors are at their reference levels, essentially serving as the starting point for our analysis.
+Intercept (-0.5956): Represents the expected attitude towards immigration when all predictors are at their reference levels and interactions are considered.
 
-Individual-Level Predictors: Each coefficient indicates the expected change in attitude towards immigration for a one-unit change in the predictor, holding all other variables constant. A positive value suggests a predictor increases positive attitudes towards immigration, whereas a negative value suggests it decreases them. This allows us to quantify the specific impact of individual factors such as age, gender, income, education, partnership status, and economic activity on immigration attitudes.
+Individual-Level Predictors: Coefficients for age, gender, household income, education years, and partner status indicate their unique contributions to attitudes towards immigration, adjusting for interactions. For example, the coefficient for female (0.0429) suggests that being female is associated with a slightly more positive attitude towards immigration than being male, holding other factors constant.
 
-Random Intercept: Captures unobserved country-specific effects, acknowledging that attitudes are not only shaped by personal factors but also by the broader country context. This acknowledges the intrinsic correlation of responses within the same country, offering insight into how much of the variation in attitudes can be attributed to country-level differences.
+Economic Activity Interactions: The interaction terms, such as age50:econact and hhnetinc:econact, highlight how the impact of age and household income on attitudes towards immigration varies across different states of economic activity. This demonstrates the complexity of attitudes towards immigration, which cannot be fully understood without considering the interplay between individual characteristics and economic contexts.
 
-Model Assumptions: Critical for the validity of our conclusions. We assume that errors and random effects are normally distributed, which is foundational for generating reliable confidence intervals and hypothesis tests. Independence of observations is assumed within and across countries, and the model presumes homoscedasticity - constant variance of error terms. Violations of these assumptions can lead to biased estimates and incorrect inferences.
+Random Effects: Significant variance components for countries suggest that attitudes towards immigration also vary significantly at the country level, beyond the individual-level predictors and their interactions. This underscores the importance of considering broader societal and cultural factors in studies of immigration attitudes.
 
-This model accounts for complex patterns in the determinants of immigration attitudes, illustrating the significant role of both individual attributes and country-specific contexts. By including a random intercept for countries, we're able to capture unobserved heterogeneity at the country level, providing a more accurate and nuanced analysis. However, it's crucial to remember that correlation does not imply causation, and the presence of unmeasured confounding variables could influence these relationships. Therefore, interpretations should be made cautiously, with an understanding that this model provides a snapshot of associations rather than definitive causal relationships.
+Model Assumptions: The interpretation remains subject to the model's assumptions. Ensuring these assumptions hold is crucial for the reliability and validity of the model's findings.
+
 
 
 ### Question 3 (a)
