@@ -316,18 +316,20 @@ Since the red line has a different slope than the blue lines, this indicates tha
 ### Question 3 (b) 
 #### Write down the equation for an extension of the RE model in 2) that addresses the researcher’s concerns. Fit this model and, based on the results, discuss the relationship between attitudes towards immigration and education.
 
-An unbiased estimate of the coefficient of eduyrs can be obtained if the cluster mean of eduyrs is included as a covariate. 
+By including the cluster mean of education years (`eduyrs_country_mean`) as a covariate alongside the interactions specified in Question 2, we aim to obtain an unbiased estimate of the effect of individual education years (`eduyrs`) on attitudes towards immigration.
+
 ```{r}
-# Extend the RE model by including the cluster mean of education years as a covariate
-re_extended_model <- lmer(zimmatt ~ eduyrs + eduyrs_country_mean + (1 | country), data = immigration_data, REML = FALSE)
+# Extend the RE model from Q2 by including interactions and the cluster mean of education years as covariates
+re_extended_model <- lmer(zimmatt ~ age50*econact + female + hhnetinc*econact + partner + hhnetinc*eduyrs + eduyrs_country_mean + (1 | country), data = immigration_data, REML = FALSE)
 summary(re_extended_model)
 
 ```
 
-The extended model now includes the individual education years (eduyrs), the cluster (country) mean of education years (eduyrs_country_mean), and random intercepts for countries.
+Interpretation of Results:
 
-The coefficient for eduyrs represents the within-country effect of education on attitudes towards immigration, controlling for the average education level in the country.
-The coefficient for eduyrs_country_mean represents the between-country effect, capturing how differences in average education levels across countries relate to attitudes towards immigration.
+Individual Education Years (eduyrs): The coefficient of 0.03793 suggests a positive effect of individual education years on attitudes towards immigration, indicating that for each additional year of education, an individual's attitude becomes more positive by approximately 0.03793 units. This effect is statistically significant, showing the importance of education in shaping perceptions of immigration.
+
+Cluster Mean of Education Years (eduyrs_country_mean): With a coefficient of 0.13369, this variable shows a positive between-country effect, suggesting that countries with higher average education levels tend to have more positive attitudes towards immigration. This effect is statistically significant, with a t value of 2.025, highlighting the broader impact of education on societal attitudes.
 
 #Interpretation of Fixed Effects:
 Individual Education Years (eduyrs): The coefficient for eduyrs is 0.060232, indicating a positive and statistically significant relationship between an individual's education years and their attitude towards immigration. Specifically, for each additional year of education that an individual completes, their attitude towards immigration improves by 0.060232 units. This effect is substantial (t value = 46.735), suggesting a strong and positive influence of personal education on immigration attitudes. This finding aligns with theories suggesting that higher education levels may lead to more openness and a better understanding of the benefits of immigration, such as cultural diversity and economic contributions.
@@ -335,24 +337,32 @@ Individual Education Years (eduyrs): The coefficient for eduyrs is 0.060232, ind
 Cluster Mean of Education Years (eduyrs_country_mean): The coefficient for eduyrs_country_mean is 0.135837, also indicating a positive relationship, but this time at the country level. This effect is statistically significant (t value = 2.005), suggesting that countries with higher average education levels tend to have more positive attitudes towards immigration. This between-country effect may reflect broader educational influences on societal attitudes, including the role of education in shaping national identity, social cohesion, and economic perspectives on immigration.
 
 #Random Effects:
-The variance component for the country random intercept is 0.1324, with a standard deviation of 0.3639. This indicates variability in immigration attitudes across countries, not explained by the model's fixed effects. The presence of significant random effects underscores the importance of considering country-specific factors and contexts in understanding attitudes towards immigration.
+Analysis of random effects reveals that there is a significant variability in attitudes towards immigration across different countries. The variance component for the country random intercept is 0.1257 with a standard deviation of 0.3545. This indicates a degree of diversity in immigration attitudes that can be attributed to country-specific factors. Such variability underscores the complex nature of immigration attitudes and highlights the importance of accounting for unique country-level influences when analyzing and interpreting these attitudes. The presence of significant random effects in our model reinforces the need for being careful in our approach to understanding the causes behind immigration attitudes, suggesting that factors unique to each country play a big role in shaping these perspectives.
+
 
 ### Question 4
 #Building on the RE model fitted in 3b), study the effects of the three country-level variables on attitudes towards immigration.
+
+Building on the extended model fitted in Question 3(b), we further explore the effects of three country-level variables on attitudes towards immigration: GNI per capita (c_zgni), long-term unemployment rate (c_ltunemp), and net migration rate (c_znetmig).
+
 ```{r}
-# Extend the RE model to include three country-level variables
+# Extend the RE model from Q2 to include three country-level variables
 names(immigration_data) #print out column names to identify the 3 country level variables
-re_extended_model_with_country_vars <- lmer(zimmatt ~ eduyrs + eduyrs_country_mean + c_zgni + c_ltunemp + c_znetmig + (1 | country), data = immigration_data, REML = FALSE)
+re_extended_model_with_country_vars <- lmer(zimmatt ~ age50*econact + female + hhnetinc*econact + partner + hhnetinc*eduyrs + eduyrs_country_mean + c_zgni + c_ltunemp + c_znetmig + (1 | country), data = immigration_data, REML = FALSE)
 summary(re_extended_model_with_country_vars)
+
 
 ```
 #Analysis of the three country-level variables:
 
-Gross National Income (GNI) per capita (c_zgni): The coefficient of 0.210235 indicates a positive relationship between GNI per capita and attitudes towards immigration. This suggests that, holding other factors constant, a one-unit increase in the standardized GNI per capita is associated with a 0.210235 unit increase in the attitude towards immigration. The statistical significance (t value = 3.025) underscores that higher income levels at the country level are correlated with more positive attitudes towards immigration. This could be interpreted as wealthier countries exhibiting more openness or positive sentiments towards immigrants, possibly due to better economic conditions or a perception of immigrants contributing to economic growth.
+GNI per Capita (c_zgni):
+The positive coefficient of 0.20267 for GNI per capita signifies a statistically significant association (t value = 2.963) between a country's economic prosperity and its attitudes towards immigration. This finding implies that higher economic status at the country level is linked to more favorable views on immigration. The statistical significance of this relationship shows economic conditions have a role in shaping national attitudes towards immigrants. It suggests that wealthier nations may have more resources to integrate immigrants, or they may view immigration as beneficial to their economic growth, leading to more positive perceptions.
 
-Long-term unemployment rate (c_ltunemp): The coefficient of -0.404418 suggests a negative association between the long-term unemployment rate and attitudes towards immigration, although the t value of -0.790 indicates this effect is not statistically significant at conventional levels. The negative sign aligns with the hypothesis that higher unemployment might lead to more negative attitudes towards immigrants, potentially due to perceived competition for jobs. However, the lack of statistical significance suggests caution in interpreting this effect as definitive without further study.
+Long-Term Unemployment Rate (c_ltunemp):
+The coefficient of -0.40425 for the long-term unemployment rate, although negative, did not reach statistical significance (t value = -0.802). This outcome indicates a complex and possibly non-linear relationship between long-term unemployment and immigration attitudes that might be influenced by other socioeconomic factors not captured in this model. The negative direction of the coefficient suggests that higher unemployment could potentially lead to negative attitudes towards immigration, perhaps due to perceived job competition, but the lack of statistical significance means we can't reach any major conclusions here and would need further investigation into the socio-economic context behind it.
 
-Net migration (c_znetmig): With a coefficient of 0.008170 and a t value of 0.128, the relationship between net migration and attitudes towards immigration is positive but not statistically significant. This indicates that, while a higher net migration rate might be expected to correlate with more positive or negative attitudes towards immigrants, depending on the context, the evidence from this model does not support a strong conclusion either way.
+Net Migration Rate (c_znetmig):
+The coefficient of 0.00246 for the net migration rate shows a positive but statistically non-significant relationship with attitudes towards immigration (t value = 0.039). This result suggests that just the volume of net migration is not a strong predictor of national attitudes towards immigration on its own. It implies that factors beyond migration rates, such as the integration policies, the composition of migrants, and public perceptions of migration's economic and cultural impacts, contribute more towards attitudes towards immigrants.
 
 ## Question 5
 
